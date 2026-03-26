@@ -1,6 +1,18 @@
 :root {
+  /* Dark Mode (Default) */
   --water-bg: #001f24;
-  --text-color: rgba(255, 255, 255, 0.85);
+  --water-color: #004d56;
+  --text-color: rgba(255, 255, 255, 0.9);
+  --btn-bg: rgba(255, 255, 255, 0.1);
+  --btn-hover: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] {
+  --water-bg: #e0f7fa;
+  --water-color: #81d4fa;
+  --text-color: rgba(0, 77, 64, 0.9);
+  --btn-bg: rgba(0, 0, 0, 0.05);
+  --btn-hover: rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -14,6 +26,7 @@ body, html {
   height: 100%;
   overflow: hidden;
   background-color: var(--water-bg);
+  transition: background-color 0.5s ease;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
 }
 
@@ -26,7 +39,47 @@ body, html {
   z-index: 1;
 }
 
-/* Subtle grain overlay for a premium feel */
+#theme-toggle {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 100;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: none;
+  background-color: var(--btn-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+#theme-toggle:hover {
+  background-color: var(--btn-hover);
+  transform: scale(1.1);
+}
+
+.mode-icon {
+  position: relative;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background-color: var(--text-color);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sun/Moon effect using box-shadow for light mode */
+[data-theme="light"] .mode-icon {
+  background-color: transparent;
+  box-shadow: inset -4px -4px 0 0 var(--text-color);
+  transform: rotate(-20deg);
+}
+
+/* Subtle grain overlay */
 body::after {
   content: "";
   position: fixed;
