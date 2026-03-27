@@ -217,9 +217,9 @@ class RiverApp {
 
             mesh.userData = {
                 char: char,
-                speed: (0.01 + Math.random() * 0.02) * 0.4,
-                drift: ((Math.random() - 0.5) * 0.005) * 0.4,
-                rotationSpeed: ((Math.random() - 0.5) * 0.01) * 0.4,
+                speed: (0.01 + Math.random() * 0.02) * 0.2,
+                drift: ((Math.random() - 0.5) * 0.005) * 0.2,
+                rotationSpeed: ((Math.random() - 0.5) * 0.01) * 0.2,
                 velocity: new THREE.Vector2(0, 0),
                 externalForce: new THREE.Vector2(0, 0)
             };
