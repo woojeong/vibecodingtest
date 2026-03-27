@@ -11,13 +11,19 @@ A minimalist and artistic web experience featuring a top-down view of a flowing 
 - **Minimalist Aesthetic:** A palette of deep teals, soft blues, and crisp white text, complemented by subtle noise textures for a premium feel.
 
 ## **Current Implementation Status**
-- [ ] Project Reset & Setup
-- [ ] Core Three.js Scene Initialization
-- [ ] Water Shader/Flowing Surface Implementation
-- [ ] Flowing Text "수요일과 바다 유리" Logic
+- [x] Project Reset & Setup
+- [x] Core Three.js Scene Initialization
+- [x] Water Shader/Flowing Surface Implementation
+- [x] Flowing Text "수요일과 바다 유리" Logic
+- [x] Mouse Interaction & Flow Disturbance
 - [ ] Visual Polish & Responsiveness
 
 ## **Detailed Outline**
 - **Initial Version:** Redesigning from scratch as a top-view river with flowing text.
 - **Tech Stack:** HTML5, CSS3, JavaScript (ES Modules), Three.js (via CDN).
 - **Key Visuals:** Animated water noise, orthographic top-down perspective, scattered Korean text elements drifting.
+- **Mouse Interaction (New):**
+    - **Interactive Flow:** The mouse acts as a physical object in the water, creating "wakes" or "disturbances."
+    - **Repulsion Logic:** Text elements will be pushed away when the mouse approaches, using a physics-based approach with velocity and damping.
+    - **Directional Influence:** The speed and direction of the mouse movement will temporarily alter the drift path of nearby text.
+    - **Visual Feedback:** The water shader may be updated to reflect mouse position as a "ripple" source.

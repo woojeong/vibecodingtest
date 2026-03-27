@@ -28,6 +28,10 @@ class RiverApp {
         this.width = window.innerWidth;
         this.height = window.innerHeight;
 
+        // Mouse tracking
+        this.mouse = new THREE.Vector2(-1000, -1000);
+        this.mouseInWorld = new THREE.Vector3(-1000, -1000, 0);
+
         // Orthographic camera
         const aspect = this.width / this.height;
         const frustumSize = 10;
@@ -57,6 +61,12 @@ class RiverApp {
         this.animate();
 
         window.addEventListener('resize', () => this.onResize());
+        window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                this.onMouseMove(e.touches[0]);
+            }
+        });
         
         // Theme Toggle Logic
         this.toggleBtn = document.getElementById('theme-toggle');
@@ -66,6 +76,22 @@ class RiverApp {
     init() {
         this.createWater();
         this.createTextFlow();
+    }
+
+    onMouseMove(e) {
+        this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        // Update mouseInWorld
+        const vector = new THREE.Vector3(this.mouse.x, this.mouse.y, 0.5);
+        vector.unproject(this.camera);
+        const dir = vector.sub(this.camera.position).normalize();
+        const distance = -this.camera.position.z / dir.z;
+        this.mouseInWorld.copy(this.camera.position).add(dir.multiplyScalar(distance));
+        
+        if (this.waterMaterial) {
+            this.waterMaterial.uniforms.mouse.value.set(this.mouseInWorld.x, this.mouseInWorld.y);
+        }
     }
 
     toggleTheme() {
@@ -94,6 +120,7 @@ class RiverApp {
         const waterShader = {
             uniforms: {
                 time: { value: 0 },
+                mouse: { value: new THREE.Vector2(-1000, -1000) },
                 color: { value: new THREE.Color(this.themes[this.currentTheme].water) }
             },
             vertexShader: `
@@ -105,14 +132,26 @@ class RiverApp {
             `,
             fragmentShader: `
                 uniform float time;
+                uniform vec2 mouse;
                 uniform vec3 color;
                 varying vec2 vUv;
+
                 void main() {
                     vec2 uv = vUv;
                     float t = time * 0.2;
+                    
+                    // Base water pattern
                     float ripple = sin(uv.x * 10.0 + t) * 0.5 + 0.5;
                     ripple += sin(uv.y * 15.0 - t * 1.5 + uv.x * 5.0) * 0.3;
                     ripple += sin((uv.x + uv.y) * 20.0 + t * 2.0) * 0.2;
+                    
+                    // Mouse disturbance (world space)
+                    vec2 worldPos = (uv - 0.5) * 30.0;
+                    float dist = distance(worldPos, mouse);
+                    float mouseRipple = exp(-dist * 1.5) * sin(dist * 10.0 - time * 5.0) * 0.5;
+                    
+                    ripple += mouseRipple;
+
                     vec3 finalColor = mix(color, color * 1.2, ripple * 0.3);
                     gl_FragColor = vec4(finalColor, 1.0);
                 }
@@ -158,7 +197,7 @@ class RiverApp {
 
     createTextFlow() {
         const charData = this.phrase.split('');
-        const numInstances = 25;
+        const numInstances = 30;
 
         for (let i = 0; i < numInstances; i++) {
             const char = charData[Math.floor(Math.random() * charData.length)];
@@ -177,10 +216,12 @@ class RiverApp {
             mesh.position.y = (Math.random() - 0.5) * 15;
 
             mesh.userData = {
-                char: char, // Store for theme switching
-                speed: 0.01 + Math.random() * 0.02,
-                drift: (Math.random() - 0.5) * 0.005,
-                rotationSpeed: (Math.random() - 0.5) * 0.01
+                char: char,
+                speed: (0.01 + Math.random() * 0.02) * 0.4,
+                drift: ((Math.random() - 0.5) * 0.005) * 0.4,
+                rotationSpeed: ((Math.random() - 0.5) * 0.01) * 0.4,
+                velocity: new THREE.Vector2(0, 0),
+                externalForce: new THREE.Vector2(0, 0)
             };
 
             this.scene.add(mesh);
@@ -195,6 +236,10 @@ class RiverApp {
         mesh.position.y = 6;
         mesh.rotation.z = (Math.random() - 0.5) * 0.5;
         mesh.scale.setScalar(0.5 + Math.random() * 0.5);
+        
+        if (mesh.userData && mesh.userData.velocity) {
+            mesh.userData.velocity.set(0, 0);
+        }
     }
 
     onResize() {
@@ -216,10 +261,40 @@ class RiverApp {
         if (this.waterMaterial) this.waterMaterial.uniforms.time.value = time;
 
         this.textElements.forEach(mesh => {
-            mesh.position.y -= mesh.userData.speed;
-            mesh.position.x += Math.sin(time + mesh.position.y) * mesh.userData.drift;
-            mesh.rotation.z += mesh.userData.rotationSpeed;
-            if (mesh.position.y < -6) this.resetMesh(mesh);
+            const data = mesh.userData;
+            
+            // Base River Flow
+            data.externalForce.set(0, -data.speed);
+            data.externalForce.x += Math.sin(time + mesh.position.y) * data.drift;
+
+            // Mouse Repulsion
+            const dist = mesh.position.distanceTo(this.mouseInWorld);
+            if (dist < 2.5) {
+                const force = new THREE.Vector2().subVectors(
+                    new THREE.Vector2(mesh.position.x, mesh.position.y),
+                    new THREE.Vector2(this.mouseInWorld.x, this.mouseInWorld.y)
+                );
+                const strength = (1 - dist / 2.5) * 0.05;
+                data.velocity.add(force.normalize().multiplyScalar(strength));
+            }
+
+            // Apply Velocity & Damping
+            data.velocity.add(data.externalForce);
+            mesh.position.x += data.velocity.x;
+            mesh.position.y += data.velocity.y;
+            data.velocity.multiplyScalar(0.9); // Damping
+
+            mesh.rotation.z += data.rotationSpeed + data.velocity.length() * 0.1;
+
+            // Bounds Check
+            const aspect = this.width / this.height;
+            const frustumWidth = 10 * aspect;
+            if (mesh.position.y < -6) {
+                this.resetMesh(mesh);
+            }
+            if (Math.abs(mesh.position.x) > frustumWidth / 2 + 1) {
+                mesh.position.x = -Math.sign(mesh.position.x) * (frustumWidth / 2);
+            }
         });
 
         this.renderer.render(this.scene, this.camera);
